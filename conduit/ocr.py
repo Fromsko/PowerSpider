@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 """
-    @Author: kong
-    @File  : ocr.py
-    @Date  : 2023-07-31 00:20:36
-    @GitHub: https://github.com/kongxiaoaaa
+Function tool
+~~~~~~~~~~~~~
+<br/>ocr 验证码识别<br/>
+>> python ocr.py image_bytes
 """
+
+import os
 from ddddocr import DdddOcr
 import json
 import base64
