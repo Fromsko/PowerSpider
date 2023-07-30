@@ -1,5 +1,6 @@
-// package conduit
-package main
+package conduit
+
+// package main
 
 import (
 	"encoding/base64"
@@ -7,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 type OCRResponse struct {
@@ -15,11 +17,15 @@ type OCRResponse struct {
 }
 
 func OcrResult(imageBytes []byte) (string, error) {
+	// OCR 运行
+	baseLocal, _ := os.Getwd()
+	ocrLocal := filepath.Join(baseLocal, "PowerSpider", "conduit", "ocr.py")
+
 	// 读取图片文件并进行base64编码
 	encodedImage := base64.StdEncoding.EncodeToString(imageBytes)
 
 	// 运行Python解释器并执行ocr.py
-	cmd := exec.Command("python", "ocr.py", string(encodedImage))
+	cmd := exec.Command("python", ocrLocal, encodedImage)
 	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
 	if err != nil {

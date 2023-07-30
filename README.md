@@ -17,15 +17,13 @@ func main() {
     // Init configure file
     config.InitConfig(
         config.Config{
-            User  : "202127530334",
-            Pwd   : "102018",
             Timer : config.Timer{
                 TimeUint: "hourse",
                 TimeInfo: 2,
             },
             ResDir: "res",
             Proxy : "http://localhost:7980"
-            RedictUrl : "http://10.13.14.20:9999/"
+            BaseUrl : "http://10.13.14.20:9999/"
         }
     )
     // Start appliction

@@ -1,5 +1,10 @@
-import os
-import argparse
+# -*- coding: utf-8 -*-
+"""
+    @Author: kong
+    @File  : ocr.py
+    @Date  : 2023-07-31 00:20:36
+    @GitHub: https://github.com/kongxiaoaaa
+"""
 from ddddocr import DdddOcr
 import json
 import base64

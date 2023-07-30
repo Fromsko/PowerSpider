@@ -1,9 +1,14 @@
 package main
 
 import (
+	"PowerSpider/conduit"
 	"PowerSpider/config"
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gocolly/colly"
@@ -16,11 +21,15 @@ type Spider struct {
 	name    string
 	spider  *colly.Collector
 	cookies []*http.Cookie
+	params  map[string]string
+	data    string
 }
 
 // 初始化任务
 func InitSpider() (c *colly.Collector) {
 	conf = config.Config{
+		User: "202127530334",
+		Pwd:  "102018",
 		Timer: config.Timer{
 			TimeUnit: "hourse",
 			TimeInfo: 2,
@@ -105,6 +114,20 @@ func (c *Spider) SetHeaders(header ...map[string]string) {
 }
 
 func (c *Spider) VisitHomePage(fetchUrl string) {
+	c.spider.OnHTML(`input`, func(e *colly.HTMLElement) {
+		ID := e.Attr("id")
+		switch ID {
+		case "__VIEWSTATE":
+			c.params["__VIEWSTATE"] = e.Attr("value")
+		case "__VIEWSTATEGENERATOR":
+			c.params["__VIEWSTATEGENERATOR"] = e.Attr("value")
+		case "__EVENTVALIDATION":
+			c.params["__EVENTVALIDATION"] = e.Attr("value")
+		default:
+			break
+		}
+	})
+
 	c.spider.OnResponse(func(r *colly.Response) {
 		if cookieJar := c.spider.Cookies(fetchUrl); len(cookieJar) > 0 {
 			fmt.Printf(
@@ -114,26 +137,37 @@ func (c *Spider) VisitHomePage(fetchUrl string) {
 			c.cookies = cookieJar
 		}
 	})
+
+	c.spider.OnScraped(func(r *colly.Response) {
+		var encoded string
+		fmt.Printf(
+			"[Spider-{%s}-Stop] Task is finished!\n",
+			c.name,
+		)
+		params := url.Values{
+			"__LASTFOCUS":          {""},
+			"__EVENTTARGET":        {"UserLogin$ImageButton1"},
+			"__EVENTARGUMENT":      {""},
+			"__VIEWSTATE":          {c.params["__VIEWSTATE"]},
+			"__VIEWSTATEGENERATOR": {c.params["__VIEWSTATEGENERATOR"]},
+			"__EVENTVALIDATION":    {c.params["__EVENTVALIDATION"]},
+			"UserLogin:txtUser":    {conf.User},
+			"UserLogin:txtPwd":     {conf.Pwd},
+		}
+
+		for key, values := range params {
+			for _, value := range values {
+				encoded += key + "=" + value + "&"
+			}
+		}
+
+		c.data = encoded[:len(encoded)-1] + "&UserLogin%3AddlPerson=%BF%A8%BB%A7&UserLogin%3AtxtSure="
+	})
+
 	c.spider.Visit(fetchUrl)
 }
 
-func (c *Spider) GetParams() {
-	c.spider.OnHTML(`#imgAuthCode`, func(e *colly.HTMLElement) {
-		fmt.Println(e.Attr("src"))
-	})
-
-	c.spider.OnHTML(`input`, func(e *colly.HTMLElement) {
-		// e.Request.Visit(e.Attr("href"))
-		// fmt.Println(e.Attr("id"))
-
-		if e.Attr("id") == "__VIEWSTATE" {
-			fmt.Println(e.Attr("value"))
-		}
-		fmt.Println(e.Attr("src"))
-	})
-}
-
-func (c *Spider) FinishTask() {
+func (c *Spider) FinishTask(verfity string) {
 	c.spider.OnScraped(func(r *colly.Response) {
 		fmt.Printf(
 			"[Spider-{%s}-Stop] Task is finished!\n",
@@ -142,15 +176,76 @@ func (c *Spider) FinishTask() {
 	})
 }
 
+func (c *Spider) VerifyCode(fetchUrl string) {
+	c.spider.SetCookies(fetchUrl, c.cookies)
+
+	c.spider.OnResponse(func(r *colly.Response) {
+		if r.StatusCode == http.StatusOK {
+			saveImage(r.Body, "info")
+		}
+
+		result, err := conduit.OcrResult([]byte(r.Body))
+		if err != nil {
+			fmt.Println("error:", err)
+			return
+		}
+		fmt.Println("识别结果是 => ", result)
+	})
+
+	c.spider.Visit(fetchUrl)
+}
+
+func saveImage(content []byte, url string) {
+	fileName := filepath.Base(url)
+	filePath := filepath.Join("res/imgs", fileName+".jpg")
+
+	// 创建目录
+	err := os.MkdirAll("res/imgs", os.ModePerm)
+	if err != nil {
+		log.Printf("创建目录失败：%s", err)
+		return
+	}
+
+	// 创建文件
+	file, err := os.Create(filePath)
+	if err != nil {
+		log.Printf("创建文件失败：%s", err)
+		return
+	}
+	defer file.Close()
+
+	// 保存图片内容
+	_, err = file.Write(content)
+	if err != nil {
+		log.Printf("保存图片失败：%s", err)
+	} else {
+		fmt.Printf("已下载并保存图片：%s\n", filePath)
+	}
+}
+
 func main() {
 	HomeSpider := &Spider{
 		name:   "主页爬虫",
 		spider: InitSpider(),
+		params: make(map[string]string, 10),
 	}
 	HomeSpider.SetHeaders()
-	HomeSpider.GetParams()
-	HomeSpider.FinishTask()
 	HomeSpider.VisitHomePage(conf.BaseUrl)
+
+	VerifySpider := &Spider{
+		name:    "验证码识别",
+		spider:  InitSpider(),
+		data:    HomeSpider.data,
+		cookies: HomeSpider.cookies,
+	}
+	VerifySpider.SetHeaders(map[string]string{
+		"Accept":          "q=0.9,image/webp,image/apng,*/*;",
+		"Accept-Encoding": "gzip, deflate",
+		"Content-Type":    "application/x-www-form-urlencoded",
+		"accept-language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+		"cache-control":   "max-age=0",
+	})
+	VerifySpider.VerifyCode(config.VerifyUrl)
 }
 
 /*
