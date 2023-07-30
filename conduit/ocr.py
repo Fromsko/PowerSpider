@@ -1,5 +1,11 @@
+"""
+Function tool
+~~~~~~~~~~~~~
+<br/>ocr 验证码识别<br/>
+>> python ocr.py image_bytes
+"""
+
 import os
-import argparse
 from ddddocr import DdddOcr
 import json
 import base64
