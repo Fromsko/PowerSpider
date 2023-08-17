@@ -28,8 +28,8 @@ type Spider struct {
 // 初始化任务
 func InitSpider() (c *colly.Collector) {
 	conf = config.Config{
-		User: "202127530334",
-		Pwd:  "102018",
+		User: "",
+		Pwd:  "",
 		Timer: config.Timer{
 			TimeUnit: "hourse",
 			TimeInfo: 2,

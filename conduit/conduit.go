@@ -19,7 +19,7 @@ type OCRResponse struct {
 func OcrResult(imageBytes []byte) (string, error) {
 	// OCR 运行
 	baseLocal, _ := os.Getwd()
-	ocrLocal := filepath.Join(baseLocal, "PowerSpider", "conduit", "ocr.py")
+	ocrLocal := filepath.Join(baseLocal, "conduit", "ocr.py")
 
 	// 读取图片文件并进行base64编码
 	encodedImage := base64.StdEncoding.EncodeToString(imageBytes)
@@ -48,9 +48,10 @@ func OcrResult(imageBytes []byte) (string, error) {
 	}
 }
 
+/*
 func main() {
 	// 读取图片文件并进行base64编码
-	imageBytes, err := os.ReadFile(`G:\Gocode\PowerSpider\conduit\AuthCode.jpg`)
+	imageBytes, err := os.ReadFile(`./conduit/AuthCode.jpg`)
 	if err != nil {
 		fmt.Println("error reading image:", err)
 		return
@@ -64,3 +65,4 @@ func main() {
 
 	fmt.Println("识别结果是 => ", result)
 }
+*/
